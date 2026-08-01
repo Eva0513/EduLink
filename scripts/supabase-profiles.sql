@@ -42,6 +42,40 @@ create index if not exists institutions_founded_on_idx on public.institutions (f
 create index if not exists jobs_degree_required_idx on public.jobs (degree_required);
 create index if not exists events_start_date_idx on public.events (start_date);
 
+-- A company creator/member must be able to read its own row immediately after
+-- onboarding. Without this policy the dashboard cannot resolve the company and
+-- redirects back to /onboarding/company, causing a redirect loop.
+drop policy if exists "company_members_read_own_company" on public.companies;
+create policy "company_members_read_own_company"
+on public.companies
+for select
+to authenticated
+using (
+  created_by = auth.uid()
+  or exists (
+    select 1
+    from public.company_members member
+    where member.company_id = companies.id
+      and member.user_id = auth.uid()
+  )
+);
+
+-- Same recovery path for institution creators and members.
+drop policy if exists "institution_members_read_own_institution" on public.institutions;
+create policy "institution_members_read_own_institution"
+on public.institutions
+for select
+to authenticated
+using (
+  created_by = auth.uid()
+  or exists (
+    select 1
+    from public.institution_members member
+    where member.institution_id = institutions.id
+      and member.user_id = auth.uid()
+  )
+);
+
 -- Organization administrators may edit only their organization profile. Existing
 -- policies are retained; these named policies are idempotently recreated.
 drop policy if exists "company_admins_update_own_profile" on public.companies;

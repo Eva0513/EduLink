@@ -15,7 +15,11 @@ export default async function CompanyDashboardPage() {
     ? supabase.from("companies").select("id, name, website, location, sector, invite_code, avatar_url, background_url, description, founded_on, specializations").eq("id", membership.company_id).maybeSingle()
     : supabase.from("companies").select("id, name, website, location, sector, invite_code, avatar_url, background_url, description, founded_on, specializations").eq("created_by", user.id).maybeSingle();
   const { data: company } = await companyQuery;
-  if (!company) redirect("/onboarding/company");
+  // Do not redirect a completed company back into onboarding. A temporary RLS
+  // or migration mismatch would otherwise create an infinite redirect loop.
+  if (!company) {
+    return <main className="min-h-screen bg-[#f3f6f7] px-5 py-16"><section className="mx-auto max-w-xl rounded-2xl border border-amber-200 bg-white p-7 shadow-sm"><p className="text-sm font-bold text-amber-700">Configurarea companiei este în curs</p><h1 className="mt-2 text-2xl font-extrabold text-slate-950">Contul tău a fost creat.</h1><p className="mt-3 text-sm leading-6 text-slate-600">Dashboardul nu poate încă citi organizația. Reîncarcă pagina după aplicarea migrației de acces.</p><a href="/dashboard/company" className="mt-5 inline-flex rounded-lg bg-[#026a81] px-4 py-2.5 text-sm font-bold text-white">Reîncarcă dashboardul</a></section></main>;
+  }
 
   const [{ count: followerCount }, { data: posts }, { data: events }] = await Promise.all([
     supabase.from("follows").select("id", { count: "exact", head: true }).eq("target_type", "company").eq("target_id", company.id),
