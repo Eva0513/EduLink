@@ -140,7 +140,7 @@ export async function createCompanyJob(input: z.infer<typeof jobSchema>): Promis
   const deadline = parsed.data.deadline ? romanianDateToIso(parsed.data.deadline) : null;
 
   const { error } = await supabase.from("jobs").insert({
-    company_id: organizationId,
+    company_id: user.id,
     title: parsed.data.title,
     description: parsed.data.description,
     requirements: parsed.data.requirements || null,

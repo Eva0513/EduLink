@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Award, BriefcaseBusiness, Code2, ExternalLink, GraduationCap, Mail, MapPin } from "lucide-react";
 import type { ReactNode } from "react";
 import { ProfileAvatar } from "@/components/ui/profile-avatar";
@@ -19,6 +19,7 @@ type PublicProfile = {
   background_url: string | null;
   location: string | null;
   email: string | null;
+  role: "student" | "company" | "institution" | "admin";
 };
 type PublicEducation = { id: string; institution_name: string; degree: string; field_of_study: string; start_date: string; end_date: string | null; is_current: boolean | null };
 type PublicExperience = { id: string; company_name: string | null; position_title: string; location: string | null; start_date: string; end_date: string | null; is_current: boolean | null; description: string | null };
@@ -31,10 +32,15 @@ export default async function PortfolioPage({ params }: PortfolioPageProps) {
   const supabase = await createClient();
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id,full_name,headline,bio,avatar_url,background_url,location,email")
+    .select("id,full_name,headline,bio,avatar_url,background_url,location,email,role")
     .eq("qr_code_slug", slug)
     .single<PublicProfile>();
   if (!profile) notFound();
+  if (profile.role === "company" || profile.role === "institution") {
+    const table = profile.role === "company" ? "companies" : "institutions";
+    const { data: organization } = await supabase.from(table).select("id").eq("created_by", profile.id).maybeSingle();
+    if (organization?.id) redirect("/organizations/" + profile.role + "/" + organization.id);
+  }
 
   const [{ data: educationData }, { data: experienceData }, { data: projectData }, { data: skillData }, { data: certificateData }] = await Promise.all([
     supabase.from("educations").select("id,institution_name,degree,field_of_study,start_date,end_date,is_current").eq("profile_id", profile.id).order("start_date", { ascending: false }),

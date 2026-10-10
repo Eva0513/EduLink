@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, ExternalLink, MapPin, UsersRound } from "lucide-react";
 import { notFound } from "next/navigation";
+import { FollowButton } from "@/components/feed/follow-button";
 import { ProfileAvatar } from "@/components/ui/profile-avatar";
 import { createClient } from "@/lib/supabase/server";
 import { formatTimeAgo } from "@/lib/utils";
@@ -73,6 +74,8 @@ export default async function OrganizationPublicPage({
   // Content belongs to the profile that administers this page. Do not expose
   // platform-wide posts/events on an unrelated organization page.
   const ownerId = organization.createdBy ?? "00000000-0000-0000-0000-000000000000";
+  const { data: { user: viewer } } = await supabase.auth.getUser();
+  const { data: ownFollow } = viewer ? await supabase.from("follows").select("id").eq("follower_id", viewer.id).eq("target_type", kind).eq("target_id", id).maybeSingle() : { data: null };
   const [{ count: followerCount }, { data: posts }, { data: events }] = await Promise.all([
     supabase
       .from("follows")
@@ -123,7 +126,7 @@ export default async function OrganizationPublicPage({
                 <span className="inline-flex items-center gap-1"><UsersRound className="h-4 w-4 text-[#168a9b]" />{followerCount ?? 0} urmăritori</span>
                 {organization.location ? <span className="inline-flex items-center gap-1"><MapPin className="h-4 w-4 text-[#168a9b]" />{organization.location}</span> : null}
               </div>
-              {organization.website ? <a href={organization.website} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[#026a81] px-4 py-2 text-sm font-bold text-white hover:bg-[#003747]"><ExternalLink className="h-4 w-4" /> Vizitează site-ul</a> : null}
+              {organization.website ? <a href={organization.website} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[#026a81] px-4 py-2 text-sm font-bold text-white hover:bg-[#003747]"><ExternalLink className="h-4 w-4" /> Vizitează site-ul</a> : null}<div className="mt-4"><FollowButton targetType={kind} targetId={id} initialIsFollowing={Boolean(ownFollow)} initialFollowerCount={followerCount ?? 0} /></div>
             </div>
           </article>
 
